@@ -1,32 +1,21 @@
 package org.pitest.sbt
 
-import scala.collection.JavaConverters._
-import sbt._
-import Keys._
-import java.io.File
-import inc.Locate
-import PitKeys._
-import org.pitest.functional.FCollection
-import org.pitest.mutationtest.incremental.XStreamHistoryStore
-import java.io.IOException
 import java.net.URLDecoder
-import org.pitest.util.Glob
-import org.pitest.mutationtest.config.ConfigurationFactory
-import java.util.Collection
-import java.util.ArrayList
-import org.pitest.mutationtest.config.ConfigOption
-import org.pitest.mutationtest.tooling.EntryPoint
-import org.pitest.classpath.ClassPathByteArraySource
-import org.pitest.mutationtest.config.ReportOptions
-import org.pitest.mutationtest.config.PluginServices
-import org.pitest.plugin.ClientClasspathPlugin
-import org.pitest.testapi.TestGroupConfig
-import org.pitest.util.IsolationUtils
+import java.util
 
+import org.pitest.mutationtest.config.{PluginServices, ReportOptions}
+import org.pitest.mutationtest.tooling.EntryPoint
+import org.pitest.sbt.PitKeys._
+import org.pitest.testapi.TestGroupConfig
+import org.pitest.util.{Glob, IsolationUtils}
+import sbt.Keys._
+import sbt._
+
+import scala.collection.JavaConverters._
 
 object PitPlugin extends Plugin {
 
-  lazy val pitestSettings = Seq(
+  override lazy val projectSettings = Seq(
     threads := 1, 
     maxMutationsPerClass := 0,
     verbose := false, 
@@ -61,18 +50,19 @@ object PitPlugin extends Plugin {
     pitestTask <<= (options, pitConfiguration, pathSettings, filterSettings, excludes) map runPitest)
 
   def runPitest(options : Options, conf : Configuration, paths: PathSettings, filters: FilterSettings, excludes: Excludes): Unit = {
-    
-    val originalCL = Thread.currentThread().getContextClassLoader()
-    Thread.currentThread().setContextClassLoader(PitPlugin.getClass.getClassLoader())
+
+    val originalCL = Thread.currentThread().getContextClassLoader
+    Thread.currentThread().setContextClassLoader(PitPlugin.getClass.getClassLoader)
     
     try {
-      val ps = new PluginServices(IsolationUtils.getContextClassLoader())
+      val ps = new PluginServices(IsolationUtils.getContextClassLoader)
       val pit = new EntryPoint
       val data = makeReportOptions(options, conf, paths, filters, excludes, ps)
-      val result = pit.execute( paths.baseDir, data, ps)
+      val env = System.getenv
+      val result = pit.execute( paths.baseDir, data, ps, env)
       
-      if ( result.getError().hasSome() ) {
-        result.getError().value().printStackTrace()
+      if ( result.getError.hasSome ) {
+        result.getError.value().printStackTrace()
       }
       
     } finally {
@@ -90,7 +80,7 @@ object PitPlugin extends Plugin {
                        , ps: PluginServices): ReportOptions = {
     
     val data = new ReportOptions
-    data.setReportDir(paths.targetPath.getAbsolutePath())
+    data.setReportDir(paths.targetPath.getAbsolutePath)
     data.setClassPathElements(plainCollection(makeClasspath(paths, ps)))
     data.setCodePaths(plainCollection(paths.mutatablePath map (p => p.getPath)))
     data.setTargetClasses(plainCollection(filters.targetClasses map toGlob))
@@ -117,10 +107,6 @@ object PitPlugin extends Plugin {
     val conf = new TestGroupConfig(plainCollection(config.excludedGroups), plainCollection(config.includedGroups))
     data.setGroupConfig(conf)
 
-    val configFactory = new ConfigurationFactory(conf,
-      new ClassPathByteArraySource(data.getClassPath()));
-    data.setConfiguration(configFactory.createConfiguration())
-
     data
   }
   
@@ -131,18 +117,18 @@ object PitPlugin extends Plugin {
    */
   def plainCollection [T](s : Seq[T]) : java.util.List[T] = {
     import scala.collection.JavaConversions._
-    new ArrayList(s)
+    new util.ArrayList(s)
   }
 
   private def makeClasspath(paths: org.pitest.sbt.PathSettings, ps : PluginServices ) : Seq[String] = {
-    val cp = paths.classPath.files map (f => f.getPath().trim())
+    val cp = paths.classPath.files map (f => f.getPath.trim())
     val services = ps.findClientClasspathPlugins().asScala 
-    val pluginPaths = services map ( c => pathTo(c.getClass()) )
+    val pluginPaths = services map ( c => pathTo(c.getClass) )
     cp ++  pluginPaths.toSet
   }
   
   private def pathTo(c : Class[_] ) = {
-    val p = c.getProtectionDomain().getCodeSource().getLocation().getPath()
+    val p = c.getProtectionDomain.getCodeSource.getLocation.getPath
     URLDecoder.decode(p, "UTF-8")
   } 
 

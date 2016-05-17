@@ -4,17 +4,19 @@ name := "sbt-pit"
 
 organization := "org.pitest.sbt"
 
-version := "1.0.0-SNAPSHOT"
+version := "1.1.10-SNAPSHOT"
 
-crossScalaVersions := Seq("2.9.2", "2.10.1", "2.11.0")
+crossScalaVersions := Seq("2.11.3")
 
 resolvers += "Local Maven" at Path.userHome.asFile.toURI.toURL + ".m2/repository"
 
-libraryDependencies += "org.pitest" % "pitest" % "1.0.0"
+val pitVersion = "1.1.10"
 
-libraryDependencies += "org.pitest" % "pitest-html-report" % "1.0.0"
+libraryDependencies += "org.pitest" % "pitest" % pitVersion
 
-publishTo <<= (version) { version: String =>
+libraryDependencies += "org.pitest" % "pitest-html-report" % pitVersion
+
+publishTo <<= version { version: String =>
    val scalasbt = "http://repo.scala-sbt.org/scalasbt/"
    val (name, url) = if (version.contains("-SNAPSHOT"))
      ("sbt-plugin-snapshots", scalasbt+"sbt-plugin-snapshots")

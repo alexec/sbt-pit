@@ -14,7 +14,7 @@ pit-sbt is available from the typesafe community ivy repo.
 Add plugin to project/plugins.sbt
 
 ``` scala
-addSbtPlugin("org.pitest.sbt" %  "sbt-pit" % "0.32")
+addSbtPlugin("org.pitest.sbt" %  "sbt-pit" % version)
 ```
 
 Setup properties in build.sbt
@@ -33,9 +33,19 @@ PitKeys.mutators := Seq("DEFAULTS", "REMOVE_CONDITIONALS")
 PitKeys.verbose := true
 ```
 
+Then run
+
+```
+sbt pitest
+```
+
 See source for details of available settings.
 
 ## Version history
+
+### 1.1.10
+
+TODO
 
 ### 0.32
 
@@ -47,4 +57,8 @@ See http://pitest.org/downloads/ for details of changes in pitest-0.32
 
 First release based on pit 0.31
 
+## Test Locally
 
+``` scala
+sbt publishLocal
+```
