@@ -4,6 +4,8 @@
 *.log
 .classpath
 .project
+.idea
+*.iml
 
 # sbt specific
 dist/*
