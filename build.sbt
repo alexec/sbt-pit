@@ -6,7 +6,7 @@ organization := "org.pitest.sbt"
 
 version := "1.1.10-SNAPSHOT"
 
-crossScalaVersions := Seq("2.11.3")
+crossScalaVersions := Seq("2.11.8")
 
 resolvers += "Local Maven" at Path.userHome.asFile.toURI.toURL + ".m2/repository"
 
