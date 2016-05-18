@@ -10,16 +10,11 @@ crossScalaVersions := Seq("2.11.3")
 
 resolvers += "Local Maven" at Path.userHome.asFile.toURI.toURL + ".m2/repository"
 
-// TODO for ScalaTest
-// resolvers += "Typesafe Releases" at "http://repo.typesafe.com/typesafe/releases/"
-
 val pitVersion = "1.1.10"
 
 libraryDependencies += "org.pitest" % "pitest" % pitVersion
 
 libraryDependencies += "org.pitest" % "pitest-html-report" % pitVersion
-
-libraryDependencies += "org.scalatest" % "scalatest_2.11" % "2.2.6"
 
 publishTo <<= version { version: String =>
    val scalasbt = "http://repo.scala-sbt.org/scalasbt/"

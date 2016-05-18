@@ -1,2 +1,0 @@
-org.pitest.sbt.scalatest.ScalaTestPluginFactory
-org.pitest.mutationtest.config.LegacyTestFrameworkPlugin
