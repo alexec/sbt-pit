@@ -3,7 +3,9 @@ package org.pitest.sbt
 import java.net.URLDecoder
 import java.util
 
+import org.pitest.coverage.CoverageSummary
 import org.pitest.mutationtest.config.{PluginServices, ReportOptions}
+import org.pitest.mutationtest.statistics.MutationStatistics
 import org.pitest.mutationtest.tooling.EntryPoint
 import org.pitest.sbt.PitKeys._
 import org.pitest.testapi.TestGroupConfig
@@ -25,7 +27,9 @@ object PitPlugin extends Plugin {
     timeoutConst := 4000,
     mutateStaticInitializers := false,
     detectInlinedCode := true,
-    
+    mutationThreshold := 0,
+    coverageThreshold := 0,
+
     mutators := Seq(),
     outputFormats := Seq("HTML"),
     includedGroups := Seq(),
@@ -46,7 +50,19 @@ object PitPlugin extends Plugin {
     pathSettings <<= (baseDirectory, reportPath, mutableCodePaths, fullClasspath in Test, sourceDirectories in Compile) map PathSettings dependsOn (compile in Compile),
     filterSettings <<= (targetClasses, targetTests, dependencyDistance) map FilterSettings,
     excludes <<= (excludedClasses, excludedMethods, avoidCallsTo) map Excludes,
-    options <<=  (detectInlinedCode,mutateStaticInitializers,threads,maxMutationsPerClass,verbose,timestampedReports,mutationUnitSize,timeoutFactor,timeoutConst) map Options,
+    options <<=  (
+      detectInlinedCode,
+      mutateStaticInitializers,
+      threads,
+      maxMutationsPerClass,
+      verbose,
+      timestampedReports,
+      mutationUnitSize,
+      timeoutFactor,
+      timeoutConst,
+      mutationThreshold,
+      coverageThreshold
+      ) map Options,
     pitestTask <<= (options, pitConfiguration, pathSettings, filterSettings, excludes) map runPitest)
 
   def runPitest(options : Options, conf : Configuration, paths: PathSettings, filters: FilterSettings, excludes: Excludes): Unit = {
@@ -62,8 +78,12 @@ object PitPlugin extends Plugin {
       val result = pit.execute( paths.baseDir, data, ps, env)
       
       if ( result.getError.hasSome ) {
-        result.getError.value().printStackTrace()
+        throw result.getError.value()
       }
+
+      val statistics = result.getStatistics.value()
+      throwErrorIfScoreBelowThreshold(data, statistics.getMutationStatistics)
+      throwErrorIfCoverageBelowThreshold(data, statistics.getCoverageSummary)
       
     } finally {
       Thread.currentThread().setContextClassLoader(originalCL)
@@ -73,11 +93,23 @@ object PitPlugin extends Plugin {
 
   }
 
+  private def throwErrorIfScoreBelowThreshold(data: ReportOptions, result: MutationStatistics) {
+    if (data.getMutationThreshold != 0 && result.getPercentageDetected < data.getMutationThreshold) {
+      throw new IllegalStateException("Mutation score of " + result.getPercentageDetected + " is below threshold of " + data.getMutationThreshold)
+    }
+  }
+
+  private def throwErrorIfCoverageBelowThreshold(data: ReportOptions, coverageSummary: CoverageSummary) = {
+    if (coverageSummary.getCoverage < data.getCoverageThreshold) {
+      throw new IllegalStateException("Line coverage of " + coverageSummary.getCoverage + "(" + coverageSummary.getNumberOfCoveredLines + "/" + coverageSummary.getNumberOfLines + ") is below threshold of " + coverageThreshold)
+    }
+  }
+
   def makeReportOptions(options: Options, config: Configuration
-                       , paths: PathSettings
-                       , filters: FilterSettings
-                       , excludes: Excludes
-                       , ps: PluginServices): ReportOptions = {
+                        , paths: PathSettings
+                        , filters: FilterSettings
+                        , excludes: Excludes
+                        , ps: PluginServices): ReportOptions = {
     
     val data = new ReportOptions
     data.setReportDir(paths.targetPath.getAbsolutePath)
@@ -103,6 +135,8 @@ object PitPlugin extends Plugin {
     data.setMutationEngine(config.engine)
     data.setMutators(plainCollection(config.mutators))
     data.addOutputFormats(plainCollection(config.outputFormats))
+    data.setMutationThreshold(options.mutationThreshold)
+    data.setCoverageThreshold(options.coverageThreshold)
 
     val conf = new TestGroupConfig(plainCollection(config.excludedGroups), plainCollection(config.includedGroups))
     data.setGroupConfig(conf)
